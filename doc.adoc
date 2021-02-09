@@ -199,7 +199,40 @@ TODO
 
 == А как в Haskell?
 
-TODO
+[source,haskell]
+----
+head :: [a] -> a
+head []    = error "Ups..."
+head (x:_) = x
+----
+
+[source,haskell]
+----
+kleisli :: Monad m => a -> m b
+
+class Applicative m => Monad m where
+  (>>=) :: m a -> (a -> m b) -> m b
+
+instance Monad Maybe where
+  (>>=) :: Maybe a -> (a -> Maybe b) -> Maybe b
+  Nothing >>= _ = Nothing
+  Just x  >>= k = k x
+
+head2May :: [a] -> [b] -> Maybe (a, b)
+head2May xs ys =
+        headMay xs >>=
+  \x -> headMay ys >>=
+  \y -> Just (x, y)
+
+-- Via do-notation
+head2May xs ys = do
+  x <- headMay xs
+  y <- headMay ys
+  Just (x, y)
+
+-- Do-notation considered harmful...
+head2May xs ys = (,) <$> headMay xs <*> headMay ys
+----
 
 == Ссылки
 
