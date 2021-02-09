@@ -1,0 +1,209 @@
+= Работа с ошибками
+Андрей Стоян <andrey.stoyan.csam@gmail.com>
+:toc:
+
+Ошибки - это события, за отсутствие которых программист готов заплатить.
+
+Рассмотрим общие подходы работы с ошибками и реализацию этих подходов на примере Прекрасных Языков Будущего (Kotlin, Rust, Haskell).
+
+== Передача ошибок
+
+Первое, что происходит с любой ошибкой после обнаружения - передача её выше по стеку.
+
+* Исключения.
+* Алгебраические типы данных (типы-суммы).
+
+---
+
+=== Исключения
+
+TODO
+
+---
+
+=== Алгебраические типы данных
+
+* Типы-произведения.
+* Типы-суммы.
+
+---
+
+==== Типы произведения
+
+===== C++
+
+[source,cpp]
+----
+struct S {
+    int i;
+    double d;
+};
+----
+
+===== Haskell
+
+[source,haskell]
+----
+data D = D Int Double
+-- or
+data D = D
+  { i :: Int
+  , d :: Double
+  }
+----
+
+==== Типы суммы
+
+===== C++
+
+[source,cpp]
+----
+struct Result<T, E> {
+    enum Type {
+        OK,
+        ERR
+    } type;
+
+    union U {
+        T ok;
+        E err;
+    } data;
+};
+
+const auto res = get_result(...);
+if (res.type == OK) {
+    do_smth_next(res.data.ok)
+}
+----
+
+===== Haskell
+
+[source, haskell]
+----
+data Either a b = Left a | Right b
+
+let res = get_result(...)
+ in case res of
+      Left e -> ...
+      Right value -> do_smth_next value
+----
+
+===== Rust
+
+[source,rust]
+----
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+let res = get_result(...);
+match res {
+    Ok(value) => do_smth_next(value),
+    Err(e) => ...
+}
+----
+
+===== Kotlin
+
+[source,kotlin]
+----
+sealed class Result<T, E>
+data class Ok<T, E>(val value: T) : Result<T, E>
+data class Err<T, E>(val error: E) : Result<T, E>
+
+val res = getResult(...)
+when(res) {
+    is Ok -> doSmthNext(res.value),
+    is Err -> ...,
+}
+----
+
+== Классификация ошибок
+
+* Не ошибки.
+* Ошибки программиста - нарушение контрактов и/или инвариантов, установленных в коде.
+* IO - события внешнего мира, мешающие решать бизнес-задачу. По факту тоже не ошибки (мы обязаны всего ожидать от враждебного мира), но коварны как настоящие ошибки!
+
+=== Не ошибки
+
+Результаты работы частичной чистой функции на разумных данных не из области определения.
+
+[source,haskell]
+----
+head :: [a] -> a
+----
+
+[source,haskell]
+----
+data Maybe a = Nothing | Just a
+
+headMay :: [a] -> Maybe a
+----
+
+[source,haskell]
+----
+data NonEmpty a = a :| [a]
+
+head :: NonEmpty a -> a
+----
+
+Далее не ошибки не рассматриваем.
+
+== Ошибки - это сложно
+
+* Логику обработки ошибок сложнее писать, основная бизнес-логика обычно более линейная.
+* И сложнее тестировать (поэтому этим обычно не занимаются).
+
+usenix https://www.usenix.org/conference/osdi14/technical-sessions/presentation/yuan
+
+TODO
+
+=== Поэтому не надо их обрабатывать
+
+
+[source,python]
+----
+init_resources()
+try:
+    work_with_resources()
+finally:
+    cleanup_resources()
+----
+
+TODO мудрость про catch и finally
+
+граница
+
+.Стек
+* Ниже - понятние, что делать (ловим конкретное исключение - знаем, что делать).
+* Выше - проще вернуть консистентное состояние + finally сработают.
+
+поймать всё
+
+TODO
+
+=== Общие советы по необработке
+
+* Crash only software.
+* Восстановление из backup по ночам.
+* Программирование с паникой.
+
+== А как в Rust?
+
+TODO
+
+== А как в Kotlin?
+
+TODO
+
+== А как в Haskell?
+
+TODO
+
+== Ссылки
+
+* http://joeduffyblog.com/2016/02/07/the-error-model/
+* https://elizarov.medium.com/kotlin-and-exceptions-8062f589d07
+* https://youtu.be/a6UtrJ4Xh-Y
+* https://youtu.be/57M2hUnnLCE?t=1946
