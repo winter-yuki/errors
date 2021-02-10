@@ -10,23 +10,10 @@
 
 Первое, что происходит с любой ошибкой после обнаружения - передача её выше по стеку.
 
-* Исключения.
-* Алгебраические типы данных (типы-суммы).
-
----
-
-=== Исключения
-
-TODO
-
----
-
 === Алгебраические типы данных
 
 * Типы-произведения.
 * Типы-суммы.
-
----
 
 ==== Типы произведения
 
@@ -56,6 +43,8 @@ data D = D
 
 ===== C++
 
+Нет прямой поддержки в языке.
+
 [source,cpp]
 ----
 struct Result<T, E> {
@@ -76,18 +65,6 @@ if (res.type == OK) {
 }
 ----
 
-===== Haskell
-
-[source, haskell]
-----
-data Either a b = Left a | Right b
-
-let res = get_result(...)
- in case res of
-      Left e -> ...
-      Right value -> do_smth_next value
-----
-
 ===== Rust
 
 [source,rust]
@@ -102,6 +79,18 @@ match res {
     Ok(value) => do_smth_next(value),
     Err(e) => ...
 }
+----
+
+===== Haskell
+
+[source, haskell]
+----
+data Either a b = Left a | Right b
+
+let res = get_result(...)
+ in case res of
+      Right value -> do_smth_next value
+      Left e -> ...
 ----
 
 ===== Kotlin
@@ -119,6 +108,26 @@ when(res) {
 }
 ----
 
+=== Исключения vs типы-суммы
+
+* Исключения.
+** Хорошего:
+*** Нативно поддерживаются языками, автоматический unwinding.
+** Плохого:
+*** Информация о возможных исключениях содержится в документации.
+*** Наличие обработки не гарантируется компилятором.
+*** Нет пометок на call-site, что функция может кинуть исключение.
+* Алгебраические типы данных (типы-суммы).
+** Хорошего:
+*** Информация о возможных ошибках содержится в типе результата функции.
+*** Наличие какой-то обработки гарантируется компилятором.
+*** На call-site видно, что функция может отработать неудачно.
+** Плохого:
+*** Требуется вручную поднимать вверх по стеку до isolation boundary.
+* Middle-ground (Swift, http://joeduffyblog.com/2016/02/07/the-error-model/[Midory]).
+* C-style: `enum my_error err_code = do_smth(arg, *result);`
+** Всё плохо.
+
 == Классификация ошибок
 
 * Не ошибки.
@@ -128,6 +137,26 @@ when(res) {
 === Не ошибки
 
 Результаты работы частичной чистой функции на разумных данных не из области определения.
+
+==== Python
+
+.Expecting None
+[source,python]
+----
+d[key]
+# vs
+d.get(key)
+----
+
+.Not expecting None
+[source,python]
+----
+xs.last()
+# vs
+xs.
+----
+
+==== Haskell
 
 [source,haskell]
 ----
@@ -147,6 +176,13 @@ data NonEmpty a = a :| [a]
 
 head :: NonEmpty a -> a
 ----
+
+==== Итог
+
+* Не используем исключения в статически типизированных языках.
+* В питоне:
+** None, если он ожидаем.
+** Исключение, если None ждать скорее всего не будут (неудачное имя функции). Лучше получить понятное исключение, чем `'NoneType' object is not something, you know`.
 
 Далее не ошибки не рассматриваем.
 
@@ -191,13 +227,71 @@ TODO
 
 == А как в Rust?
 
-TODO
+* Для ошибок программиста - паника.
+* Для всего остального - возвращаемые значения
+
+[source,rust]
+----
+pub enum Error {
+    WriteIO(io::Error)
+}
+
+impl From<io::Error> for Error {
+    fn from(e: io::Error) -> Error {
+        Error::WriteIO(e)
+    }
+}
+
+impl From<png::EncodingError> for Error {
+    fn from(e: png::EncodingError) -> Error {
+        match e {
+            png::EncodingError::IoError(e) => Error::WriteIO(e),
+            png::EncodingError::Format(e) =>
+                panic!("Unable to encode image as png \
+                        (inconsistent image state): {}", e)
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Image(Vec<Vec<Color>>);
+
+impl Image {
+    pub fn from_size(w: NonZeroUsize, h: NonZeroUsize) -> Self {
+        Image(vec![
+            vec![Color::black(); usize::from(w)];
+            usize::from(h)
+        ])
+    }
+
+    pub fn write_png(&self, path: &Path) -> Result<(), Error> {
+        let file = fs::File::create(path)?;
+        // let file = match fs::File::create(path) {
+        //     Ok(v) => v,
+        //     Err(e) => return Error::from(e),
+        // }
+        let writer = io::BufWriter::new(file);
+        let mut encoder = png::Encoder::new(writer, self.w() as u32, self.h() as u32);
+        encoder.set_color(png::ColorType::RGB);
+        encoder.set_depth(png::BitDepth::Eight);
+        let data = self.linearized();
+        Ok(encoder
+            .write_header()?
+            .write_image_data(&data)?)
+    }
+
+    ...
+}
+----
 
 == А как в Kotlin?
 
 TODO
 
 == А как в Haskell?
+
+* Для ошибок программиста `\_|_`.
+* Для остальных - монады `Maybe`, `Either`, `Except`.
 
 [source,haskell]
 ----
@@ -220,9 +314,9 @@ instance Monad Maybe where
 
 head2May :: [a] -> [b] -> Maybe (a, b)
 head2May xs ys =
-        headMay xs >>=
-  \x -> headMay ys >>=
-  \y -> Just (x, y)
+  headMay xs >>= \x ->
+  headMay ys >>= \y ->
+  Just (x, y)
 
 -- Via do-notation
 head2May xs ys = do
