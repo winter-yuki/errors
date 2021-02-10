@@ -140,20 +140,18 @@ when(res) {
 
 ==== Python
 
-.Expecting None
-[source,python]
-----
-d[key]
-# vs
-d.get(key)
-----
-
 .Not expecting None
 [source,python]
 ----
+d[key]
 xs.last()
-# vs
-xs.
+----
+
+.Expecting None
+[source,python]
+----
+d.get(key)
+xs.lastOrNone()
 ----
 
 ==== Haskell
@@ -161,6 +159,12 @@ xs.
 [source,haskell]
 ----
 head :: [a] -> a
+
+-- vs
+
+data NonEmpty a = a :| [a]
+
+head :: NonEmpty a -> a
 ----
 
 [source,haskell]
@@ -168,13 +172,6 @@ head :: [a] -> a
 data Maybe a = Nothing | Just a
 
 headMay :: [a] -> Maybe a
-----
-
-[source,haskell]
-----
-data NonEmpty a = a :| [a]
-
-head :: NonEmpty a -> a
 ----
 
 ==== Итог
@@ -212,7 +209,7 @@ TODO мудрость про catch и finally
 граница
 
 .Стек
-* Ниже - понятние, что делать (ловим конкретное исключение - знаем, что делать).
+* Ниже - понятние, что делать (ловим конкретное исключение - знаем, что делать), можно а ошибку аргументы функции пихать.
 * Выше - проще вернуть консистентное состояние + finally сработают.
 
 поймать всё
