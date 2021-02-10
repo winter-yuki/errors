@@ -286,7 +286,20 @@ impl Image {
 
 == А как в Kotlin?
 
-TODO
+* Для не ошибок - типы-суммы.
+* Для остального - исключения. IO ошибки, как и ошибки программиста, обычно поднимают высоко по стеку для централизованной обработки.
+** Для ошибок программиста используют стандартные исключения.
+** Для остальных - исключения из собственных иерархий.
+
+.Сладкое Nullability
+[source,kotlin]
+----
+val number: Int = string.toInt()
+return number + 5
+// vs
+val number: Int? = string.toIntOrNull()
+return number?.plus(5) ?: 42
+----
 
 == А как в Haskell?
 
@@ -334,3 +347,4 @@ head2May xs ys = (,) <$> headMay xs <*> headMay ys
 * https://elizarov.medium.com/kotlin-and-exceptions-8062f589d07
 * https://youtu.be/a6UtrJ4Xh-Y
 * https://youtu.be/57M2hUnnLCE?t=1946
+* https://matklad.github.io/2020/10/15/study-of-std-io-error.html
