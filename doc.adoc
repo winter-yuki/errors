@@ -258,7 +258,7 @@ finally:
 
 [source,rust]
 ----
--- Untipattern! https://matklad.github.io/2020/10/15/study-of-std-io-error.html
+// Untipattern! https://matklad.github.io/2020/10/15/study-of-std-io-error.html
 pub enum Error {
     WriteIO(io::Error)
 }
